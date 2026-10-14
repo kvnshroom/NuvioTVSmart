@@ -206,15 +206,23 @@ export const localMediaTracksRepository = {
         let tracks = [];
         try {
           tracks = await fetchVidaaMkvAudioTracks(targetUrl);
-          showVidaaTrackDebug(`MKV-Spuren: ${tracks.length} gefunden ${JSON.stringify(tracks.map((t) => t.language || t.name || "?"))}`);
+          showVidaaTrackDebug(`Direkt gelesen: ${tracks.length} Spuren ${JSON.stringify(tracks.map((t) => t.language || t.name || "?"))}`);
         } catch (error) {
           console.warn("VIDAA MKV track names unavailable", error);
-          showVidaaTrackDebug(`FEHLER: ${error?.name || ""} ${error?.message || error}`);
+          showVidaaTrackDebug(`Direkt FEHLER: ${error?.name || ""} ${error?.message || error}`);
         }
-        try {
-          const nativeTracks = document.querySelector("video")?.audioTracks;
-          showVidaaTrackDebug(`video.audioTracks: ${nativeTracks ? nativeTracks.length : "nicht vorhanden"}`);
-        } catch (_) {}
+        if (tracks.length === 0) {
+          // A direct read fails when the stream host sends no CORS headers.
+          // The dev server (npm run serve:vidaa) can probe the file for us.
+          try {
+            const payload = await fetchJson(buildSameOriginTracksUrl(targetUrl));
+            tracks = Array.isArray(payload) ? payload : [];
+            showVidaaTrackDebug(`Server /tracks: ${tracks.length} Spuren`);
+          } catch (_) {
+            showVidaaTrackDebug("Server /tracks: nicht verfuegbar");
+            // Static hosting (e.g. GitHub Pages) has no /tracks endpoint.
+          }
+        }
         showVidaaTrackDebug(`URL: ${targetUrl.slice(0, 90)}`);
         tracksCache.set(targetUrl, {
           tracks,
