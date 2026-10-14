@@ -96,7 +96,7 @@ export function createPlayerScreenMethods27() {
             if (!v || !v.currentSrc) return;
             const q = typeof v.getVideoPlaybackQuality === "function" ? v.getVideoPlaybackQuality() : null;
             vidaaPlayerDebug(
-              `TICK t=${v.currentTime.toFixed(2)} rs=${v.readyState} paused=${v.paused} audioBytes=${v.webkitAudioDecodedByteCount ?? "?"} videoBytes=${v.webkitVideoDecodedByteCount ?? "?"} frames=${q ? q.totalVideoFrames : "?"} muted=${v.muted} vol=${v.volume}`
+              `TICK t=${v.currentTime.toFixed(2)} rs=${v.readyState} paused=${v.paused} audioBytes=${v.webkitAudioDecodedByteCount ?? "?"} videoBytes=${v.webkitVideoDecodedByteCount ?? "?"} frames=${q ? q.totalVideoFrames : "?"} muted=${v.muted} gate=${Boolean(internals.PlayerController?.startupAudioGateActive)}`
             );
           }, 3000);
         }
