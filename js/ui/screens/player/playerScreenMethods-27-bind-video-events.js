@@ -89,6 +89,17 @@ export function createPlayerScreenMethods27() {
             `${event.type} t=${video.currentTime.toFixed(2)} rs=${video.readyState} ns=${video.networkState} paused=${video.paused} seeking=${video.seeking} buf=[${ranges}]${video.error ? ` ERR=${video.error.code}` : ""}`
           );
         };
+        // TEMP: every 3s, show whether the clock and the decoders are moving.
+        if (!globalThis.__vidaaDebugTicker) {
+          globalThis.__vidaaDebugTicker = setInterval(() => {
+            const v = document.querySelector("video");
+            if (!v || !v.currentSrc) return;
+            const q = typeof v.getVideoPlaybackQuality === "function" ? v.getVideoPlaybackQuality() : null;
+            vidaaPlayerDebug(
+              `TICK t=${v.currentTime.toFixed(2)} rs=${v.readyState} paused=${v.paused} audioBytes=${v.webkitAudioDecodedByteCount ?? "?"} videoBytes=${v.webkitVideoDecodedByteCount ?? "?"} frames=${q ? q.totalVideoFrames : "?"} muted=${v.muted} vol=${v.volume}`
+            );
+          }, 3000);
+        }
         ["loadedmetadata", "waiting", "stalled", "seeking", "seeked", "canplay", "playing", "error", "abort", "emptied"].forEach((eventName) =>
           bindings.push([eventName, onDebugState])
         );
