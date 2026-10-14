@@ -4,6 +4,22 @@ import { createPlayerVideoEventHandlers } from "./playerVideoEventHandlers.js";
 import { Platform } from "../../../platform/index.js";
 import { getVidaaBufferGapTarget, timeRangesToArray } from "../../../platform/vidaa/vidaaBufferGap.js";
 
+// TEMP (pages-test only): on-screen player debug.
+function vidaaPlayerDebug(line) {
+  try {
+    let box = document.getElementById("vidaa-player-debug");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "vidaa-player-debug";
+      box.style.cssText =
+        "position:fixed;right:10px;top:10px;max-width:60%;z-index:2147483647;background:rgba(0,0,0,.85);color:#0f0;font:14px monospace;padding:8px;white-space:pre-wrap;pointer-events:none";
+      document.body.appendChild(box);
+    }
+    const stamp = new Date().toTimeString().slice(0, 8);
+    box.textContent = `${box.textContent}\n${stamp} ${line}`.split("\n").slice(-12).join("\n");
+  } catch (_) {}
+}
+
 export function createPlayerScreenMethods27() {
   return {
     bindVideoEvents() {
@@ -59,10 +75,23 @@ export function createPlayerScreenMethods27() {
           if (video.seeking) return;
           const target = getVidaaBufferGapTarget(video.currentTime, timeRangesToArray(video.buffered));
           if (target === null) return;
+          vidaaPlayerDebug(`GAP-SPRUNG ${video.currentTime.toFixed(2)} -> ${target.toFixed(2)}`);
           video.currentTime = target;
           if (!this.paused) video.play()?.catch?.(() => {});
         };
         ["waiting", "progress", "canplay", "seeked"].forEach((eventName) => bindings.push([eventName, onBufferGap]));
+        // TEMP (pages-test only): show player state on screen.
+        const onDebugState = (event) => {
+          const ranges = timeRangesToArray(video.buffered)
+            .map(([a, b]) => `${a.toFixed(1)}-${b.toFixed(1)}`)
+            .join(" ");
+          vidaaPlayerDebug(
+            `${event.type} t=${video.currentTime.toFixed(2)} rs=${video.readyState} ns=${video.networkState} paused=${video.paused} seeking=${video.seeking} buf=[${ranges}]${video.error ? ` ERR=${video.error.code}` : ""}`
+          );
+        };
+        ["loadedmetadata", "waiting", "stalled", "seeking", "seeked", "canplay", "playing", "error", "abort", "emptied"].forEach((eventName) =>
+          bindings.push([eventName, onDebugState])
+        );
       }
 
       bindings.forEach(([eventName, handler]) => {
