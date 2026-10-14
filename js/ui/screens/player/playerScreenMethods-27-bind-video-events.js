@@ -80,6 +80,28 @@ export function createPlayerScreenMethods27() {
           if (!this.paused) video.play()?.catch?.(() => {});
         };
         ["waiting", "progress", "canplay", "seeked"].forEach((eventName) => bindings.push([eventName, onBufferGap]));
+        // TEMP (pages-test only): report whether this browser can switch audio tracks.
+        const reportAudioTrackSupport = () => {
+          const list = video.audioTracks;
+          if (!list) {
+            console.warn(
+              "[Nuvio audio] video.audioTracks NICHT verfuegbar - Tonspuren koennen nicht gewechselt werden. Chrome: chrome://flags/#enable-experimental-web-platform-features aktivieren und Chrome neu starten."
+            );
+            vidaaPlayerDebug("AUDIOTRACKS: nicht verfuegbar (Chrome-Flag fehlt?)");
+            return;
+          }
+          const tracks = Array.from(list).map((t, i) => `${i}:${t.enabled ? "*" : ""}${t.language || "?"}/${t.label || "-"}`);
+          console.info(`[Nuvio audio] video.audioTracks verfuegbar - ${list.length} Spur(en): ${tracks.join(", ")}`);
+          vidaaPlayerDebug(`AUDIOTRACKS: ${list.length} [${tracks.join(" ")}]`);
+        };
+        bindings.push(["loadedmetadata", reportAudioTrackSupport]);
+        if (video.audioTracks && !video.__nuvioAudioDebugBound) {
+          video.__nuvioAudioDebugBound = true;
+          video.audioTracks.addEventListener?.("change", () => {
+            console.info("[Nuvio audio] Tonspur gewechselt");
+            reportAudioTrackSupport();
+          });
+        }
         // TEMP (pages-test only): show player state on screen.
         const onDebugState = (event) => {
           const ranges = timeRangesToArray(video.buffered)
