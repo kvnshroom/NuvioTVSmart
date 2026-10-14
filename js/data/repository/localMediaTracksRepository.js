@@ -124,6 +124,21 @@ async function fetchJson(url) {
   }
 }
 
+// TEMP (pages-test only): on-screen debug for the VIDAA MKV track probe.
+function showVidaaTrackDebug(line) {
+  try {
+    let box = document.getElementById("vidaa-track-debug");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "vidaa-track-debug";
+      box.style.cssText =
+        "position:fixed;left:10px;bottom:10px;max-width:90%;z-index:2147483647;background:rgba(0,0,0,.85);color:#ff0;font:16px monospace;padding:8px;white-space:pre-wrap;pointer-events:none";
+      document.body.appendChild(box);
+    }
+    box.textContent = `${box.textContent}\n${line}`.split("\n").slice(-8).join("\n");
+  } catch (_) {}
+}
+
 export const localMediaTracksRepository = {
   async getTracks(mediaUrl) {
     const targetUrl = String(mediaUrl || "").trim();
@@ -191,9 +206,16 @@ export const localMediaTracksRepository = {
         let tracks = [];
         try {
           tracks = await fetchVidaaMkvAudioTracks(targetUrl);
+          showVidaaTrackDebug(`MKV-Spuren: ${tracks.length} gefunden ${JSON.stringify(tracks.map((t) => t.language || t.name || "?"))}`);
         } catch (error) {
           console.warn("VIDAA MKV track names unavailable", error);
+          showVidaaTrackDebug(`FEHLER: ${error?.name || ""} ${error?.message || error}`);
         }
+        try {
+          const nativeTracks = document.querySelector("video")?.audioTracks;
+          showVidaaTrackDebug(`video.audioTracks: ${nativeTracks ? nativeTracks.length : "nicht vorhanden"}`);
+        } catch (_) {}
+        showVidaaTrackDebug(`URL: ${targetUrl.slice(0, 90)}`);
         tracksCache.set(targetUrl, {
           tracks,
           expiresAt: Date.now() + (tracks.length > 0 ? TRACK_CACHE_TTL_MS : Math.min(TRACK_CACHE_TTL_MS, 5000))
