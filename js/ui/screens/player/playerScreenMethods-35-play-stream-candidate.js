@@ -1,6 +1,10 @@
 /* eslint-disable no-unused-vars */
 import * as internals from "./playerScreenContext.js";
-import { pickVidaaNextAutoPlayCandidate } from "../../../platform/vidaa/vidaaAutoPlayFailover.js";
+import {
+  getVidaaAutoPlayFailoverEligibility,
+  isVidaaFailoverMediaError,
+  pickVidaaNextAutoPlayCandidate
+} from "../../../platform/vidaa/vidaaAutoPlayFailover.js";
 
 export function createPlayerScreenMethods35() {
   const {
@@ -240,17 +244,31 @@ export function createPlayerScreenMethods35() {
     },
     // VIDAA + automatic source selection: when a source fails to start, play the
     // next one instead of showing the error. Returns true when a retry started.
-    tryVidaaAutoPlayNextSource(failedCandidate = this.getCurrentStreamCandidate()) {
+    tryVidaaAutoPlayNextSource(failedCandidate = this.getCurrentStreamCandidate(), { mediaErrorCode = 0 } = {}) {
       const settings = PlayerSettingsStore.get();
       const autoPlayOn =
         String(settings.streamAutoPlayMode || "MANUAL").toUpperCase() !== "MANUAL" && isAutoPlayEffectivelyEnabled(settings);
       if (!Environment.isVidaa()) {
         return false;
       }
-      if (!autoPlayOn || this.params?.streamRouteParams?.manualSelection) {
+      const eligibility = getVidaaAutoPlayFailoverEligibility({
+        autoPlayOn,
+        autoPlaySelected: this.params?.autoPlaySelected,
+        manualSelection: this.params?.streamRouteParams?.manualSelection,
+        userPickedSource: this.vidaaUserPickedSource
+      });
+      if (eligibility !== "eligible") {
         console.info("VIDAA auto-play failover skipped", {
-          reason: autoPlayOn ? "manual-selection" : "auto-play-off",
+          reason: eligibility,
           mode: settings.streamAutoPlayMode || "MANUAL"
+        });
+        return false;
+      }
+      if (!isVidaaFailoverMediaError(mediaErrorCode, globalThis.navigator?.onLine)) {
+        console.info("VIDAA auto-play failover skipped", {
+          reason: "error-not-source-related",
+          mediaErrorCode,
+          online: globalThis.navigator?.onLine !== false
         });
         return false;
       }
@@ -279,12 +297,19 @@ export function createPlayerScreenMethods35() {
       if (nextIndex >= 0) {
         this.currentStreamIndex = nextIndex;
       }
+      // Log list positions, not stream ids: ids can contain stream URLs with tokens.
       console.warn("VIDAA auto-play: source failed to start, trying the next one", {
-        failed: failedCandidate?.id || "",
-        next: next.id || "",
+        failedIndex: this.streamCandidates.findIndex((entry) => entry?.id && entry.id === failedCandidate?.id),
+        nextIndex,
         attempt: this.vidaaAutoPlayFailoverAttempts
       });
-      void this.playStreamCandidate(next, { preservePlaybackState: true });
+      // Like the engine switch: let the next source report its own startup error
+      // instead of having it swallowed by the 120 ms error throttle.
+      this.lastPlaybackErrorAt = 0;
+      void this.playStreamCandidate(next, {
+        preservePlaybackState: true,
+        mountToken: this.playerMountToken
+      });
       return true;
     },
     async switchStream(direction) {
@@ -304,6 +329,7 @@ export function createPlayerScreenMethods35() {
       if (!selected) {
         return;
       }
+      this.vidaaUserPickedSource = true;
       await this.playStreamCandidate(selected, { preservePlaybackState: true });
     },
     markPlaybackSourceFailed(url = this.activePlaybackUrl, streamCandidate = this.getCurrentStreamCandidate()) {

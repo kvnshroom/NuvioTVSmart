@@ -26,6 +26,9 @@ tests/*
 !tests/test-vidaa-autoplay-selecting.mjs
 !tests/test-vidaa-autoplay-failover.mjs
 !tests/test-vidaa-mkv-tracks.mjs
+!tests/test-vidaa-player-mount-reset.mjs
+!tests/test-vidaa-resume-restore.mjs
+!tests/test-vidaa-tracks-endpoint.mjs
 !tests/fixtures/
 tests/fixtures/*
 !tests/fixtures/vidaa-audio-tracks.mkv
@@ -33,6 +36,7 @@ tests/fixtures/*
 tests/helpers/*
 !tests/helpers/vidaaTextInputHarness.mjs
 !tests/test-vidaa-tile-*.mjs
+!tests/test-vidaa-legacy-installer.mjs
 !tests/fake-vidaa-tv/
 !tests/fake-vidaa-tv/**
 *.ipk

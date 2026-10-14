@@ -30,6 +30,12 @@ function buildSameOriginTracksUrl(mediaUrl) {
   return `/tracks/${encodeURIComponent(String(mediaUrl || "").trim())}`;
 }
 
+// Set only by the dev server (scripts/serve.mjs) in nuvio.env.js. Static hosts
+// such as GitHub Pages have no /tracks endpoint and must never see stream URLs.
+function hasSameOriginTracksEndpoint() {
+  return globalThis.__NUVIO_ENV__?.NUVIO_LOCAL_TRACKS_ENDPOINT === true;
+}
+
 function rememberLocalMediaServerUrl(value) {
   try {
     const parsed = new URL(String(value || ""));
@@ -206,12 +212,14 @@ export const localMediaTracksRepository = {
         let tracks = [];
         try {
           tracks = await fetchVidaaMkvAudioTracks(targetUrl);
-          showVidaaTrackDebug(`Direkt gelesen: ${tracks.length} Spuren ${JSON.stringify(tracks.map((t) => t.language || t.name || "?"))}`);
+          showVidaaTrackDebug(
+            `Direkt gelesen: ${tracks.length} Spuren ${JSON.stringify(tracks.map((t) => t.language || t.name || "?"))}`
+          );
         } catch (error) {
           console.warn("VIDAA MKV track names unavailable", error);
           showVidaaTrackDebug(`Direkt FEHLER: ${error?.name || ""} ${error?.message || error}`);
         }
-        if (tracks.length === 0) {
+        if (tracks.length === 0 && hasSameOriginTracksEndpoint()) {
           // A direct read fails when the stream host sends no CORS headers.
           // The dev server (npm run serve:vidaa) can probe the file for us.
           try {
@@ -220,13 +228,23 @@ export const localMediaTracksRepository = {
             showVidaaTrackDebug(`Server /tracks: ${tracks.length} Spuren`);
           } catch (_) {
             showVidaaTrackDebug("Server /tracks: nicht verfuegbar");
-            // Static hosting (e.g. GitHub Pages) has no /tracks endpoint.
+            // The dev server could not probe this file.
           }
         }
-        showVidaaTrackDebug(`URL: ${targetUrl.slice(0, 90)}`);
+        showVidaaTrackDebug(
+          `Host: ${(() => {
+            try {
+              return new URL(targetUrl).host;
+            } catch (_) {
+              return "?";
+            }
+          })()}`
+        );
         tracksCache.set(targetUrl, {
           tracks,
-          expiresAt: Date.now() + (tracks.length > 0 ? TRACK_CACHE_TTL_MS : Math.min(TRACK_CACHE_TTL_MS, 5000))
+          expiresAt:
+            Date.now() +
+            (tracks.length > 0 ? TRACK_CACHE_TTL_MS : Math.min(TRACK_CACHE_TTL_MS, 5000))
         });
         return tracks;
       }

@@ -2,7 +2,7 @@ import * as internals from "./playerScreenContext.js";
 import { createPlayerVideoLifecycleHandlers } from "./playerVideoLifecycleHandlers.js";
 import { createPlayerVideoEventHandlers } from "./playerVideoEventHandlers.js";
 import { Platform } from "../../../platform/index.js";
-import { getVidaaBufferGapTarget, timeRangesToArray } from "../../../platform/vidaa/vidaaBufferGap.js";
+import { shouldJumpVidaaBufferGap, timeRangesToArray } from "../../../platform/vidaa/vidaaBufferGap.js";
 
 // TEMP (pages-test only): on-screen player debug.
 function vidaaPlayerDebug(line) {
@@ -71,11 +71,26 @@ export function createPlayerScreenMethods27() {
       if (Platform.isVidaa()) {
         // A resume seek can leave currentTime in front of the first buffered keyframe, where
         // playback never starts. Step over that small gap and keep playing unless paused.
+        // Only armed for a short while after a resume restore or a seek (see seekPlaybackSeconds).
         const onBufferGap = () => {
-          if (video.seeking) return;
-          const target = getVidaaBufferGapTarget(video.currentTime, timeRangesToArray(video.buffered));
+          const armed = this.vidaaBufferGapArm;
+          if (!armed) return;
+          const now = Date.now();
+          if (now > armed.until) {
+            this.vidaaBufferGapArm = null;
+            return;
+          }
+          const target = shouldJumpVidaaBufferGap({
+            armed,
+            now,
+            currentTime: video.currentTime,
+            ranges: timeRangesToArray(video.buffered),
+            seeking: video.seeking,
+            scrubbing: this.seekPreviewSeconds != null
+          });
           if (target === null) return;
           vidaaPlayerDebug(`GAP-SPRUNG ${video.currentTime.toFixed(2)} -> ${target.toFixed(2)}`);
+          this.vidaaBufferGapArm = null;
           video.currentTime = target;
           if (!this.paused) video.play()?.catch?.(() => {});
         };
@@ -122,8 +137,8 @@ export function createPlayerScreenMethods27() {
             );
           }, 3000);
         }
-        ["loadedmetadata", "waiting", "stalled", "seeking", "seeked", "canplay", "playing", "error", "abort", "emptied"].forEach((eventName) =>
-          bindings.push([eventName, onDebugState])
+        ["loadedmetadata", "waiting", "stalled", "seeking", "seeked", "canplay", "playing", "error", "abort", "emptied"].forEach(
+          (eventName) => bindings.push([eventName, onDebugState])
         );
       }
 

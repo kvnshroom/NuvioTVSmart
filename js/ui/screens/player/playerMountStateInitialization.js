@@ -282,7 +282,9 @@ export function initializePlayerMountState(params, initialStreamUrl) {
   this.selectedManifestSubtitleTrackId = null;
   this.hlsManifestSubtitlePromotionUrls = new Set();
   this.activePlaybackUrl = initialStreamUrl || null;
+  this.clearVidaaRestoreRetryTimer?.();
   this.pendingPlaybackRestore = buildPendingPlaybackRestore(params);
+  this.vidaaBufferGapArm = null;
   this.trackDiscoveryToken = 0;
   this.trackDiscoveryInProgress = false;
   this.trackDiscoveryTimer = null;
@@ -294,6 +296,8 @@ export function initializePlayerMountState(params, initialStreamUrl) {
   this.maxSilentAudioFallbackCount = 1;
   this.lastPlaybackErrorAt = 0;
   this.failedPlaybackUrls = new Set();
+  this.vidaaAutoPlayFailoverAttempts = 0;
+  this.vidaaUserPickedSource = false;
   this.failedPlaybackStreamIds = new Set();
   this.playbackStallTimer = null;
   this.playbackEngineValidationEngine = "";
