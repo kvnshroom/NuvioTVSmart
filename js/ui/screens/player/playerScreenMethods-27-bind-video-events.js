@@ -3,6 +3,7 @@ import { createPlayerVideoLifecycleHandlers } from "./playerVideoLifecycleHandle
 import { createPlayerVideoEventHandlers } from "./playerVideoEventHandlers.js";
 import { Platform } from "../../../platform/index.js";
 import { shouldJumpVidaaBufferGap, timeRangesToArray } from "../../../platform/vidaa/vidaaBufferGap.js";
+import { shouldDisableVidaaInitialTextTrack } from "../../../platform/vidaa/vidaaVideo.js";
 
 // TEMP (pages-test only): on-screen player debug.
 function vidaaPlayerDebug(line) {
@@ -69,6 +70,15 @@ export function createPlayerScreenMethods27() {
         ["dashtrackschanged", onTrackListChanged]
       ];
       if (Platform.isVidaa()) {
+        // The new source started loading: from now on timeupdate belongs to it.
+        bindings.push([
+          "loadstart",
+          () => {
+            if (this.pendingPlaybackRestore?.awaitingNewSource) {
+              this.pendingPlaybackRestore.awaitingNewSource = false;
+            }
+          }
+        ]);
         // A resume seek can leave currentTime in front of the first buffered keyframe, where
         // playback never starts. Step over that small gap and keep playing unless paused.
         // Only armed for a short while after a resume restore or a seek (see seekPlaybackSeconds).
@@ -140,6 +150,22 @@ export function createPlayerScreenMethods27() {
         ["loadedmetadata", "waiting", "stalled", "seeking", "seeked", "canplay", "playing", "error", "abort", "emptied"].forEach(
           (eventName) => bindings.push([eventName, onDebugState])
         );
+
+        // VIDAA renders the first embedded subtitle track as soon as it appears, while its
+        // mode reads "disabled". When Nuvio shows no built-in subtitle, turn it off for
+        // real (setNativeTextTrack(-1) toggles it, see selectVidaaTextTrack). A track
+        // Nuvio picked itself, an addon or manifest subtitle is left alone.
+        const textTrackList = this.getVideoTextTrackList();
+        if (textTrackList && typeof textTrackList.addEventListener === "function") {
+          const onVidaaTextTrackAdded = () => {
+            setTimeout(() => {
+              if (!shouldDisableVidaaInitialTextTrack(this)) return;
+              PlayerController.setNativeTextTrack?.(-1);
+            }, 0);
+          };
+          textTrackList.addEventListener("addtrack", onVidaaTextTrackAdded);
+          this.videoListeners.push({ target: textTrackList, eventName: "addtrack", handler: onVidaaTextTrackAdded });
+        }
       }
 
       bindings.forEach(([eventName, handler]) => {
