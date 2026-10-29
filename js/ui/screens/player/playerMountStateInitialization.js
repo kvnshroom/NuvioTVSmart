@@ -1,3 +1,4 @@
+import { LivePlaybackWatchClock } from "./livePlaybackUi.js";
 /* eslint-disable no-unused-vars */
 import * as internals from "./playerScreenContext.js";
 
@@ -17,6 +18,8 @@ export function initializePlayerMountState(params, initialStreamUrl) {
     createSubtitleOptionVirtualState,
     normalizeParentalWarnings
   } = internals;
+  this.livePlaybackLatched = false;
+  this.liveWatchClock = new LivePlaybackWatchClock();
   this.subtitles = [];
   this.embeddedSubtitleTracks = [];
   this.nextEpisodeTransitionMeta = null;
@@ -60,6 +63,7 @@ export function initializePlayerMountState(params, initialStreamUrl) {
   this.startupAudioPreferenceApplied = false;
   this.startupAudioPreferenceApplying = false;
   this.startupAudioFallbackApplied = false;
+  this.startupImplicitAudioFallback = null;
   this.startupAudioTrackSetSignature = "";
   this.startupAudioPreferenceRetryTimer = null;
   this.startupAudioPreferenceRetryDeadline = 0;
@@ -237,7 +241,8 @@ export function initializePlayerMountState(params, initialStreamUrl) {
     onStopTrailer: () => this.stopPostPlayTrailer()
   });
 
-  this.parentalWarnings = normalizeParentalWarnings(params.parentalWarnings || params.parentalGuide);
+  // Match Android: only show localized warnings resolved by the parental guide API.
+  this.parentalWarnings = [];
   this.parentalGuideVisible = false;
   this.parentalGuideExiting = false;
   this.parentalGuideShown = false;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.__NUVIO_PLATFORM__ = "vidaa";
 const { Platform } = await import("../js/platform/index.js");
+const { getTvRuntimePerformanceProfile } = await import("../js/platform/tvRuntimePerformance.js");
 const { noteVidaaNavigationKeyDown, noteVidaaNavigationKeyUp, resetVidaaNavigationActivity } =
   await import("../js/ui/navigation/vidaaNavigationActivity.js");
 const { createHomeScreenMethods03 } =
@@ -42,6 +43,7 @@ Router.getCurrent = () => "home";
 function platform(name) {
   globalThis.__NUVIO_PLATFORM__ = name;
   Platform.current = null;
+  getTvRuntimePerformanceProfile({ forceRefresh: true });
   resetVidaaNavigationActivity();
   now = 0;
   geometryReads = 0;
@@ -128,6 +130,8 @@ function homeSurface() {
     querySelectorAll(selector) {
       globalScans += 1;
       if (selector.includes(".home-content-card")) return [];
+      // Upstream 1.2.10 indexes home artwork in every state (loaded or pending).
+      if (selector.includes(".home-poster-landscape-logo")) return images;
       if (!selector.includes("[data-src]")) return images.filter((image) => image.src);
       return images.filter((image) => image.dataset.src);
     }

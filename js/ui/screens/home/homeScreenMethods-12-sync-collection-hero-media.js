@@ -1,14 +1,14 @@
 import * as internals from "./homeScreenContext.js";
-import { bindExpandedBackdropLoad } from "./vidaaHomeImageWindow.js";
 
 export function createHomeScreenMethods12() {
-  const { Platform, MODERN_HOME_CONSTANTS, firstNonEmpty, isCollectionFolderItem, normalizeCollectionFolderItem } = internals;
+  const { MODERN_HOME_CONSTANTS, firstNonEmpty, isCollectionFolderItem, normalizeCollectionFolderItem, bindExpandedBackdropLoad } =
+    internals;
 
   return {
     syncCollectionHeroMedia(hero = null) {
       const heroLayer = this.container?.querySelector(".home-hero-trailer-layer");
       const heroMedia = this.container?.querySelector(".home-modern-hero-media");
-      if (Platform.isVidaa()) {
+      if (this.isVidaaHomeRuntime?.()) {
         // Collection hover media competes with remote navigation for the TV
         // decoder. Keep the static collection artwork and folder action.
         if (this.collectionHeroMediaKey || isCollectionFolderItem(hero)) {
@@ -191,6 +191,7 @@ export function createHomeScreenMethods12() {
       }
       const activeFrame = container.querySelector("iframe");
       if (activeFrame) {
+        activeFrame.dataset.ambientTrailerPlaying = "false";
         try {
           activeFrame.contentWindow?.postMessage(
             {
@@ -314,7 +315,9 @@ export function createHomeScreenMethods12() {
       const trailerEnabled = Boolean(prefs.focusedPosterBackdropTrailerEnabled) && !this.shouldSuppressAutomaticTrailerPlayback();
       const shouldPreviewTrailer = trailerEnabled && (useLandscapePosters || expandSettingEnabled);
       const landscapeExpandedCardMode = useLandscapePosters && shouldPreviewTrailer && requestedTrailerTarget === "expanded_card";
-      const shouldExpand = (expandSettingEnabled && !useLandscapePosters) || landscapeExpandedCardMode;
+      const suppressCardExpansionForHeroTrailer = shouldPreviewTrailer && requestedTrailerTarget === "hero_media";
+      const shouldExpand =
+        !suppressCardExpansionForHeroTrailer && ((expandSettingEnabled && !useLandscapePosters) || landscapeExpandedCardMode);
       return {
         shouldExpand,
         shouldPreviewTrailer,

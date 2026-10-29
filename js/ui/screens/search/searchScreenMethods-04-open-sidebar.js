@@ -1,7 +1,5 @@
 /* eslint-disable no-unused-vars */
 import * as internals from "./searchScreen.js";
-import { Platform } from "../../../platform/index.js";
-import { animateVidaaFocusScroll } from "../../navigation/vidaaFocusScroll.js";
 
 export function createSearchScreenMethods04() {
   const {
@@ -10,9 +8,12 @@ export function createSearchScreenMethods04() {
     getRootSidebarNodes,
     getRootSidebarSelectedNode,
     isRootSidebarNode,
+    isPerformanceConstrainedRuntime,
     setModernSidebarExpanded,
     setLegacySidebarExpanded,
-    escapeSelectorValue
+    escapeSelectorValue,
+    getTvRuntimePerformanceProfile,
+    animateVidaaFocusScroll
   } = internals;
 
   return {
@@ -130,11 +131,15 @@ export function createSearchScreenMethods04() {
         springMap.set(container, springState);
       }
     },
+    shouldUseImmediateFocusScroll() {
+      return isPerformanceConstrainedRuntime();
+    },
     animateScroll(container, axis, targetValue, duration = 150, options = {}) {
       if (!container) {
         return;
       }
-      if (Platform.isVidaa()) {
+      // VIDAA runs its own focus animation (runtime profile, like the webOS camera rule).
+      if (getTvRuntimePerformanceProfile().platform === "vidaa") {
         animateVidaaFocusScroll(this, container, axis, targetValue);
         return;
       }
@@ -148,6 +153,11 @@ export function createSearchScreenMethods04() {
           ? Math.max(0, container.scrollHeight - container.clientHeight)
           : Math.max(0, container.scrollWidth - container.clientWidth);
       const nextValue = Math.max(0, Math.min(max, Math.round(targetValue)));
+      if (this.shouldUseImmediateFocusScroll()) {
+        this.cancelScrollAnimation(container, axis);
+        container[property] = nextValue;
+        return;
+      }
       const startValue = Number(container[property] || 0);
       if (Math.abs(startValue - nextValue) <= 1) {
         container[property] = nextValue;
@@ -188,7 +198,8 @@ export function createSearchScreenMethods04() {
       if (!container) {
         return;
       }
-      if (Platform.isVidaa()) {
+      // VIDAA runs its own focus animation (runtime profile, like the webOS camera rule).
+      if (getTvRuntimePerformanceProfile().platform === "vidaa") {
         animateVidaaFocusScroll(this, container, axis, targetValue);
         return;
       }
@@ -198,6 +209,11 @@ export function createSearchScreenMethods04() {
           ? Math.max(0, container.scrollHeight - container.clientHeight)
           : Math.max(0, container.scrollWidth - container.clientWidth);
       const nextValue = Math.max(0, Math.min(max, Math.round(targetValue)));
+      if (this.shouldUseImmediateFocusScroll()) {
+        this.cancelScrollAnimation(container, axis);
+        container[property] = nextValue;
+        return;
+      }
       const prefersReducedMotion = globalThis?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       if (prefersReducedMotion) {
         container[property] = nextValue;

@@ -1,9 +1,14 @@
 import * as internals from "./homeScreenContext.js";
-import { animateVidaaFocusScroll, VIDAA_FOCUS_SCROLL_DURATION_MS } from "../../navigation/vidaaFocusScroll.js";
-import { settleVidaaHomeReturnFocus } from "./vidaaHomeReturnFocus.js";
 
 export function createHomeScreenMethods02() {
-  const { Platform, MODERN_HOME_CONSTANTS, findHomeFocusIdentityMatch, MODERN_CAMERA_PAN_EASING } = internals;
+  const {
+    MODERN_HOME_CONSTANTS,
+    findHomeFocusIdentityMatch,
+    MODERN_CAMERA_PAN_EASING,
+    animateVidaaFocusScroll,
+    VIDAA_FOCUS_SCROLL_DURATION_MS,
+    settleVidaaHomeReturnFocus
+  } = internals;
 
   return {
     restoreModernFocusState(focusState) {
@@ -39,8 +44,8 @@ export function createHomeScreenMethods02() {
         return false;
       }
 
-      this.setFocusedNode(target, { suppressDelegatedFocus: Platform.isVidaa() && this.isRestoringFocusFromBack });
-      if (Platform.isVidaa() && this.isRestoringFocusFromBack) {
+      this.setFocusedNode(target, { suppressDelegatedFocus: this.isVidaaHomeRuntime() && this.isRestoringFocusFromBack });
+      if (this.isVidaaHomeRuntime() && this.isRestoringFocusFromBack) {
         settleVidaaHomeReturnFocus(this, target, viewport);
       }
       this.syncFocusedCollectionCardState();
@@ -95,8 +100,8 @@ export function createHomeScreenMethods02() {
         return false;
       }
 
-      this.setFocusedNode(target, { suppressDelegatedFocus: Platform.isVidaa() && this.isRestoringFocusFromBack });
-      if (Platform.isVidaa() && this.isRestoringFocusFromBack) {
+      this.setFocusedNode(target, { suppressDelegatedFocus: this.isVidaaHomeRuntime() && this.isRestoringFocusFromBack });
+      if (this.isVidaaHomeRuntime() && this.isRestoringFocusFromBack) {
         settleVidaaHomeReturnFocus(this, target, main);
       }
       this.syncFocusedCollectionCardState();
@@ -148,7 +153,7 @@ export function createHomeScreenMethods02() {
       if (!container) {
         return;
       }
-      if (Platform.isVidaa()) {
+      if (this.isVidaaHomeRuntime()) {
         if (axis === "y") {
           this.modernCameraFollowLastVerticalContainer = container;
         } else {
@@ -170,6 +175,12 @@ export function createHomeScreenMethods02() {
           : Math.max(0, container.scrollWidth - container.clientWidth);
       const nextValue = Math.max(0, Math.min(max, Math.round(targetValue)));
       const key = axis === "y" ? "y" : "x";
+      if (this.shouldUseImmediateCameraScroll()) {
+        // Camera-follow callers must honor the same immediate policy as focus moves.
+        this.cancelScrollAnimation(container, axis);
+        container[property] = nextValue;
+        return;
+      }
       const startValue = Number(container[property] || 0);
       if (Math.abs(startValue - nextValue) <= 1) {
         container[property] = nextValue;
@@ -217,7 +228,7 @@ export function createHomeScreenMethods02() {
       if (!container) {
         return;
       }
-      if (Platform.isVidaa()) {
+      if (this.isVidaaHomeRuntime()) {
         animateVidaaFocusScroll(this, container, axis, targetValue, { duration: VIDAA_FOCUS_SCROLL_DURATION_MS });
         return;
       }
@@ -228,6 +239,11 @@ export function createHomeScreenMethods02() {
           : Math.max(0, container.scrollWidth - container.clientWidth);
       const nextValue = Math.max(0, Math.min(max, Math.round(targetValue)));
       const key = axis === "y" ? "y" : "x";
+      if (this.shouldUseImmediateCameraScroll()) {
+        this.cancelScrollAnimation(container, axis);
+        container[property] = nextValue;
+        return;
+      }
       const prefersReducedMotion = globalThis?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       if (prefersReducedMotion) {
         container[property] = nextValue;
@@ -315,7 +331,7 @@ export function createHomeScreenMethods02() {
       }
       const state = this.modernCameraFollowState || null;
       if (stopAnimations) {
-        if (Platform.isVidaa()) {
+        if (this.isVidaaHomeRuntime()) {
           for (const frameKey of ["_trackHorizRaf", "_mainVertRaf", "_mainClassicVertRaf"]) {
             if (this[frameKey]) {
               cancelAnimationFrame(this[frameKey]);

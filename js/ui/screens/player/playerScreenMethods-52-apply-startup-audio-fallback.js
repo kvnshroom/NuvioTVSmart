@@ -5,6 +5,7 @@ export function createPlayerScreenMethods52() {
   const {
     PlayerController,
     selectStartupAudioFallbackOption,
+    hasOnlyImplicitStartupAudioOptions,
     resolveSubtitleStyleControlAvailability,
     Environment,
     TizenCapabilities,
@@ -25,7 +26,20 @@ export function createPlayerScreenMethods52() {
     applyStartupAudioFallback() {
       this.clearStartupAudioPreferenceRetry();
       this.startupAudioFallbackApplied = true;
-      const fallbackOption = selectStartupAudioFallbackOption(this.collectAudioOptionItems());
+      const audioOptions = this.collectAudioOptionItems();
+      if (Environment.isVidaa() && !this.startupAudioPreferenceApplied && hasOnlyImplicitStartupAudioOptions(audioOptions)) {
+        // A slow native open can outlive discovery before exposing any tracks.
+        // Preserve one preference pass when its first real metadata arrives.
+        this.startupImplicitAudioFallback = {
+          video: PlayerController.video,
+          playToken: PlayerController.playRequestToken,
+          mountToken: this.playerMountToken,
+          sourceAttemptToken: this.sourcePlaybackAttemptToken,
+          playbackUrl: this.activePlaybackUrl,
+          audioToken: Number(this.audioSelectionToken || 0)
+        };
+      }
+      const fallbackOption = selectStartupAudioFallbackOption(audioOptions);
       if (!fallbackOption?.entry || !Number.isFinite(fallbackOption.entryIndex)) {
         this.startupAudioPreferenceApplied = true;
         return true;
@@ -449,7 +463,9 @@ export function createPlayerScreenMethods52() {
         isWebOsNative: usingWebOsNative,
         rendererMode,
         supportsExternalDelay: PlayerController.supportsAvPlayExternalSubtitleDelay?.() === true,
-        preserveAssStyles: assStylesManaged
+        preserveAssStyles: assStylesManaged,
+        supportsAssPlacement: this.assSubtitleRenderer?.supportsPlacement === true,
+        bitmap: Boolean(this.bitmapSubtitleTrack || selectedEmbeddedTrack?.bitmapSubtitle)
       });
       const unavailableValue = assStylesManaged
         ? t("subtitle_style_preserves_ass", {}, "ASS/SSA styles are preserved")
@@ -466,6 +482,11 @@ export function createPlayerScreenMethods52() {
           id: "fontSize",
           label: t("subtitle_style_font_size", {}, "Font Size"),
           value: `${normalizeSubtitleFontSize(style.fontSize)}%`
+        },
+        {
+          id: "stripSdh",
+          label: t("sub_strip_sdh", {}, "Strip SDH subtitles"),
+          value: style.stripSdh ? t("subtitle_style_on", {}, "On") : t("subtitle_style_off", {}, "Off")
         },
         {
           id: "bold",

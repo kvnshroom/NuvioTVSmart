@@ -1,10 +1,12 @@
 /* eslint-disable no-unused-vars */
 import * as internals from "./playerScreenContext.js";
 import { Platform } from "../../../platform/index.js";
+import { readableStreamText } from "../../../core/streams/streamDisplayText.js";
 
 export function createPlayerScreenMethods67() {
   const {
     PlayerController,
+    Environment,
     streamRepository,
     StreamBadgeSettingsStore,
     Router,
@@ -63,7 +65,7 @@ export function createPlayerScreenMethods67() {
                         <button type="button"
                                 class="player-episode-stream-filter focusable${selected ? " selected" : ""}${focused ? " focused" : ""}"
                                 data-episode-stream-filter-index="${index}">
-                          ${escapeHtml(filter === "all" ? t("subtitle_all", {}, "All") : filter)}
+                          ${escapeHtml(filter === "all" ? t("subtitle_all", {}, "All") : readableStreamText(filter, Environment))}
                         </button>
                       `;
                     })
@@ -95,9 +97,9 @@ export function createPlayerScreenMethods67() {
                       const addonLogoUrl = showAddonLogo
                         ? getPlayerSourceLogoDisplayUrl(stream.addonLogo, () => this.scheduleSourceLogoRender())
                         : "";
-                      const sourceLabel = stream.label || "Stream";
-                      const sourceDescription = stream.description || stream.addonName || "";
-                      const sourceAddonName = stream.addonName || t("nav_addons", {}, "Addon");
+                      const sourceLabel = readableStreamText(stream.label || "Stream", Environment);
+                      const sourceDescription = readableStreamText(stream.description || stream.addonName || "", Environment);
+                      const sourceAddonName = readableStreamText(stream.addonName || t("nav_addons", {}, "Addon"), Environment);
                       const sourceSide = showAddonLogo
                         ? `<div class="player-source-side">
                             ${addonLogoUrl ? `<img class="player-source-logo" src="${escapeAttribute(addonLogoUrl)}" alt="" decoding="async" loading="lazy" referrerpolicy="no-referrer" />` : ""}

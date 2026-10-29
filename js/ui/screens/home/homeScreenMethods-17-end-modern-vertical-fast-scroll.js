@@ -1,8 +1,7 @@
 import * as internals from "./homeScreenContext.js";
-import { VIDAA_FOCUS_SCROLL_DURATION_MS } from "../../navigation/vidaaFocusScroll.js";
 
 export function createHomeScreenMethods17() {
-  const { Platform, MODERN_HOME_CONSTANTS } = internals;
+  const { MODERN_HOME_CONSTANTS, VIDAA_FOCUS_SCROLL_DURATION_MS } = internals;
 
   return {
     endModernVerticalFastScroll({ land = true } = {}) {
@@ -33,7 +32,7 @@ export function createHomeScreenMethods17() {
     },
     startModernVerticalFastScroll(direction) {
       const main = this.container?.querySelector(".home-modern-rows-viewport");
-      if (this.layoutMode !== "modern" || !main || !direction || this.isPerformanceConstrained()) {
+      if (this.layoutMode !== "modern" || !main || !direction || this.shouldUseImmediateCameraScroll()) {
         // Constrained TV runtimes cannot sustain a frame-by-frame scrollTop write
         // over the fully mounted Home DOM. Let the existing throttled focus path
         // handle repeated D-pad input with immediate focus scrolling instead.
@@ -140,7 +139,7 @@ export function createHomeScreenMethods17() {
     ensureMainVerticalVisibility(target, direction = null, current = null, layoutAdjustment = 0) {
       if (this.layoutMode === "modern") {
         if (
-          Platform.isVidaa() &&
+          this.isVidaaHomeRuntime() &&
           (direction === "left" || direction === "right") &&
           current &&
           this.getMainFocusAnchor(current) === this.getMainFocusAnchor(target)
@@ -165,7 +164,7 @@ export function createHomeScreenMethods17() {
           if (!next?.container) {
             return;
           }
-          if (Platform.isVidaa()) {
+          if (this.isVidaaHomeRuntime()) {
             this.modernCameraFollowLastVerticalContainer = next.container;
             this.animateScroll(next.container, "y", next.value, VIDAA_FOCUS_SCROLL_DURATION_MS);
             return;
@@ -174,7 +173,7 @@ export function createHomeScreenMethods17() {
           if (delta <= 1) {
             return;
           }
-          if (this.shouldUseImmediateFocusScroll()) {
+          if (this.shouldUseImmediateCameraScroll()) {
             this.cancelScrollAnimation(next.container, "y");
             next.container.scrollTop = Math.round(Number(next.value || 0));
             return;
@@ -240,7 +239,10 @@ export function createHomeScreenMethods17() {
           cancelAnimationFrame(this._trackHorizRaf);
           this._trackHorizRaf = null;
         }
-        if (!Platform.isVidaa() && (this.shouldUseImmediateHorizontalScrollForNode(target) || this.shouldUseImmediateFocusScroll())) {
+        if (
+          !this.isVidaaHomeRuntime() &&
+          (this.shouldUseImmediateHorizontalScrollForNode(target) || this.shouldUseImmediateCameraScroll())
+        ) {
           const next = this.getModernTrackAlignedScrollTarget(target, layoutAdjustment);
           if (next?.container) {
             this.cancelScrollAnimation(next.container, "x");
@@ -261,7 +263,7 @@ export function createHomeScreenMethods17() {
           if (!next?.container) {
             return;
           }
-          if (Platform.isVidaa()) {
+          if (this.isVidaaHomeRuntime()) {
             this.modernCameraFollowLastHorizontalContainer = next.container;
             this.animateScroll(next.container, "x", next.value, VIDAA_FOCUS_SCROLL_DURATION_MS);
             return;
@@ -289,7 +291,7 @@ export function createHomeScreenMethods17() {
       const targetRight = targetLeft + target.offsetWidth;
       const visibleLeft = metrics.visibleLeft;
       const visibleRight = metrics.visibleRight;
-      const useImmediateHorizontalScroll = !Platform.isVidaa() && this.shouldUseImmediateHorizontalScrollForNode(target);
+      const useImmediateHorizontalScroll = !this.isVidaaHomeRuntime() && this.shouldUseImmediateHorizontalScrollForNode(target);
 
       if (targetLeft < visibleLeft) {
         if (useImmediateHorizontalScroll) {

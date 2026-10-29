@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { Platform } from "../../../platform/index.js";
 import * as internals from "./playerScreenContext.js";
+import { readableStreamText } from "../../../core/streams/streamDisplayText.js";
 
 export function createPlayerScreenMethods63() {
   const {
@@ -237,7 +238,7 @@ export function createPlayerScreenMethods63() {
                 const focused = this.sourcesFocus.zone === "filter" && this.sourcesFocus.index === index;
                 return `
                 <div class="player-sources-filter focusable${selected ? " selected" : ""}${focused ? " focused" : ""}" data-sources-zone="filter" data-sources-index="${index}"${vidaaSourceFocusAttributes}>
-                  ${escapeHtml(filter === "all" ? t("subtitle_all", {}, "All") : filter)}
+                  ${escapeHtml(filter === "all" ? t("subtitle_all", {}, "All") : readableStreamText(filter, Environment))}
                 </div>
               `;
               })
@@ -263,9 +264,9 @@ export function createPlayerScreenMethods63() {
                       const playingMarker = isCurrent
                         ? `<div class="player-source-playing">${escapeHtml(t("sources_playing", {}, "Playing"))}</div>`
                         : "";
-                      const sourceLabel = stream.label || "Stream";
-                      const sourceDescription = stream.description || stream.addonName || "";
-                      const sourceAddonName = stream.addonName || t("nav_addons", {}, "Addon");
+                      const sourceLabel = readableStreamText(stream.label || "Stream", Environment);
+                      const sourceDescription = readableStreamText(stream.description || stream.addonName || "", Environment);
+                      const sourceAddonName = readableStreamText(stream.addonName || t("nav_addons", {}, "Addon"), Environment);
                       const sourceTitle = `<div class="player-source-title" dir="${contentTextDirection(sourceLabel)}">${escapeHtml(sourceLabel)}</div>`;
                       const mainTitle =
                         !showAddonLogo && playingMarker

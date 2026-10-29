@@ -138,6 +138,7 @@ export {
   HERO_ROTATE_INTERVAL_MS,
   HOME_BACKGROUND_RENDER_DELAY_LEGACY_MS,
   HOME_BACKGROUND_RENDER_DELAY_MS,
+  HOME_LAZY_IMAGE_EVICT_MARGIN_PX,
   HOME_LEGACY_LAZY_HYDRATION_DEBOUNCE_MS,
   HOME_LEGACY_LAZY_HYDRATION_MAX_PER_FRAME,
   HOME_ADDON_MANIFEST_TIMEOUT_MS,
@@ -195,7 +196,7 @@ export {
   MODERN_SIDEBAR_PILL_AUTO_COLLAPSE_MS,
   CW_RELEASE_ALERT_MAX_AGE_MS,
   isDirectionalKeyCode,
-  HOME_LAZY_IMAGE_SELECTOR,
+  HOME_LAZY_IMAGE_LIFECYCLE_SELECTOR,
   HOME_LAZY_IMAGE_ROW_SELECTOR,
   homePerfNow,
   logHomePerf,
@@ -358,3 +359,9 @@ export {
 } from "./homeScreenHelpers-14-get-home-grid-column-count.js";
 
 export { createPosterCardMarkup } from "./homeScreenHelpers-15-create-poster-card-markup.js";
+
+// VIDAA port: helpers the home method factories read through internals.
+export { animateVidaaFocusScroll, VIDAA_FOCUS_SCROLL_DURATION_MS } from "../../navigation/vidaaFocusScroll.js";
+export { isVidaaNavigationBusy } from "../../navigation/vidaaNavigationActivity.js";
+export { settleVidaaHomeReturnFocus } from "./vidaaHomeReturnFocus.js";
+export { bindExpandedBackdropLoad } from "./vidaaHomeImageWindow.js";
